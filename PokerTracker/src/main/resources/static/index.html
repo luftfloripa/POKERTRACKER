@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokerTracker - Painel</title>
+    <link rel="stylesheet" href="css/estilo.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="img/icon-192.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <link rel="icon" type="image/png" href="img/icon-192.png">
+</head>
+<body>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div id="tela-login" class="pagina-login">
+    <div class="login-card">
+        <div class="login-logo">
+            <span class="naipe-espadas">♠</span><span class="naipe-copas">♥</span><span class="naipe-paus">♣</span><span class="naipe-ouros">♦</span>
+            <br>PokerTracker
+        </div>
+        <div class="login-subtitulo">Acesso Restrito</div>
+        <form id="formLogin" class="form-empilhado form-login">
+            <input type="text" id="email" class="input-login" placeholder="E-mail" required>
+            <input type="password" id="senha" class="input-login" placeholder="Sua Senha" required>
+            <button type="submit" class="btn-login mt-20">ENTRAR</button>
+        </form>
+        <p id="msgErro" class="mt-20 msg-erro hidden">E-mail ou senha incorretos. ❌</p>
+    </div>
+</div>
+
+<div id="tela-app" class="hidden">
+    <nav class="navbar">
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <div class="nav-links-container" id="navMenu">
+            <div class="nav-grupo-esquerda">
+                <span id="nomeUsuarioLogado" class="saudacao"></span>
+                <a href="#" onclick="navegarPara('dashboard')" class="btn-nav">Dashboard</a>
+                <a href="#" onclick="navegarPara('usuarios')" id="linkAdmin" class="btn-nav hidden">Gestão de Clientes</a>
+            </div>
+            <div class="nav-grupo-direita">
+                <a href="#" onclick="navegarPara('perfil')" class="btn-nav">Meu Perfil</a>
+                <button onclick="fazerLogout()" class="btn-sair btn-sair-mobile">Sair</button>
+            </div>
+        </div>
+        <div class="nav-logo">
+            <span class="naipe-espadas">♠</span><span class="naipe-copas">♥</span><span class="naipe-paus">♣</span><span class="naipe-ouros">♦</span>
+            <span class="margin-logo-texto">POKERTRACKER</span>
+            <span class="naipe-espadas">♠</span><span class="naipe-copas">♥</span><span class="naipe-paus">♣</span><span class="naipe-ouros">♦</span>
+        </div>
+    </nav>
+
+    <div id="view-dashboard" class="container-geral view-section">
+        <div class="painel-indicadores-estatico">
+            <div class="card-indicador"><h3>Profit</h3><div id="lucroTotal" class="valor">$ 0.00</div></div>
+            <div class="card-indicador"><h3>ROI (%)</h3><div id="roi" class="valor">0.00%</div></div>
+            <div class="card-indicador"><h3>ABI ($)</h3><div id="abi" class="valor">$ 0.00</div></div>
+            <div class="card-indicador"><h3>Make Up ($)</h3><div id="makeUp" class="valor">$ 0.00</div></div>
+            <div class="card-indicador" style="cursor: pointer; background-color: #fff;" onclick="limparFiltrosEAnimar()" title="Clique para ver o histórico completo"><h3>Saldo Total</h3><div id="valorBanca" class="valor">$ 0.00</div></div>
+
+            <div class="card-indicador plataforma" onclick="filtrarPorPlataformaRapido('PokerStars')"><h3>PokerStars</h3><div id="banca-pokerstars" class="valor">0.00</div></div>
+            <div class="card-indicador plataforma" onclick="filtrarPorPlataformaRapido('GG Poker')"><h3>GG Poker</h3><div id="banca-ggpoker" class="valor">0.00</div></div>
+            <div class="card-indicador plataforma" onclick="filtrarPorPlataformaRapido('Coin Poker')"><h3>Coin Poker</h3><div id="banca-coinpoker" class="valor">0.00</div></div>
+        </div>
+
+        <div class="container-flex-forms">
+            <div class="container-form" style="padding: 0; background: transparent; box-shadow: none;">
+                <div class="accordion-header" onclick="toggleAccordion('content-torneio', this)">Cadastrar Torneio</div>
+                <div id="content-torneio" class="accordion-content">
+                    <div class="accordion-content-inner card">
+                        <form id="formTorneio" class="form-empilhado">
+                            <input type="hidden" name="id" id="torneioId">
+                            <input type="text" name="descricao" placeholder="Descrição" required>
+                            <div class="linha-inputs">
+                                <select name="plataforma" required>
+                                    <option value="" disabled selected>Plataforma</option>
+                                    <option value="PokerStars">PokerStars</option>
+                                    <option value="GG Poker">GG Poker</option>
+                                    <option value="Coin Poker">COIN Poker</option>
+                                </select>
+                                <input type="date" name="data" required>
+                            </div>
+                            <div class="linha-inputs">
+                                <input type="number" name="buyIn" placeholder="Buy-in ($)" step="0.01" min="0" required>
+                                <input type="number" name="rebuy" placeholder="Rebuy ($)" step="0.01" min="0">
+                            </div>
+                            <div class="linha-inputs">
+                                <input type="number" name="addon" placeholder="Add-on ($)" step="0.01" min="0">
+                                <input type="number" name="itm" placeholder="ITM ($)" step="0.01" min="0" required>
+                            </div>
+                            <button type="submit" id="btnSalvarTorneio">SALVAR</button>
+                            <button type="button" id="btnCancelarEdicao" class="btn-cancelar-edicao hidden" onclick="cancelarEdicao()">CANCELAR EDIÇÃO</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container-form" style="padding: 0; background: transparent; box-shadow: none;">
+                <div class="accordion-header" onclick="toggleAccordion('content-movimentacao', this)">Movimentações</div>
+                <div id="content-movimentacao" class="accordion-content">
+                    <div class="accordion-content-inner card">
+                        <h2 class="subtitulo-secao">Registrar Movimentação</h2>
+                        <form id="formCaixa" class="form-empilhado">
+                            <div class="linha-inputs">
+                                <input type="number" name="valor" placeholder="Valor ($)" step="0.01" required>
+                                <select name="tipo" required>
+                                    <option value="DEPOSITO">Depósito</option>
+                                    <option value="SAQUE">Saque</option>
+                                </select>
+                            </div>
+                            <div class="linha-inputs">
+                                <select name="plataforma" required>
+                                    <option value="" disabled selected>Plataforma</option>
+                                    <option value="PokerStars">PokerStars</option>
+                                    <option value="GG Poker">GG Poker</option>
+                                    <option value="Coin Poker">Coin Poker</option>
+                                </select>
+                                <input type="date" name="data" required>
+                            </div>
+                            <button type="submit">REGISTRAR</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container-form" style="padding: 0; background: transparent; box-shadow: none;">
+                <div class="accordion-header" onclick="toggleAccordion('content-filtros', this)">Filtros e Relatórios</div>
+                <div id="content-filtros" class="accordion-content">
+                    <div class="accordion-content-inner card">
+                        <div class="form-empilhado">
+                            <div class="linha-inputs">
+                                <div class="flex-1"><label class="texto-ajuda label-ajuda-inline">Início:</label><input type="date" id="filtroDataInicio"></div>
+                                <div class="flex-1"><label class="texto-ajuda label-ajuda-inline">Fim:</label><input type="date" id="filtroDataFim"></div>
+                            </div>
+                            <div class="margin-top-10">
+                                <select id="filtroPlataforma">
+                                    <option value="" selected>Plataforma</option>
+                                    <option value="PokerStars">PokerStars</option>
+                                    <option value="GG Poker">GG Poker</option>
+                                    <option value="Coin Poker">COIN Poker</option>
+                                </select>
+                            </div>
+                            <div class="filtro-acoes-coluna">
+                                <button onclick="carregarTudo()" class="btn-verde">FILTRAR</button>
+                                <button onclick="limparFiltros()" class="btn-cinza">LIMPAR</button>
+                                <button onclick="exportarCSV()" class="btn-azul">SALVAR</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-grafico">
+            <canvas id="graficoBanca" height="300"></canvas>
+        </div>
+
+        <div class="container-tabela card">
+            <div class="tabela-header">
+                <h2>Histórico de Torneios</h2>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                    <tr><th>Data</th><th>Descrição</th><th>Plataforma</th><th>Custos ($)</th><th>ITM ($)</th><th>Resultado ($)</th><th>Editar</th><th>Deletar</th></tr>
+                    </thead>
+                    <tbody id="corpoTabela"></tbody>
+                </table>
+            </div>
+            <div class="paginacao-container">
+                <button id="btnPaginaAnterior" onclick="mudarPagina(-1)" class="btn-paginacao" disabled>⬅️ Anterior</button>
+                <span id="infoPagina" class="span-paginacao">Página 1 de 1</span>
+                <button id="btnPaginaProxima" onclick="mudarPagina(1)" class="btn-paginacao" disabled>Próxima ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-usuarios" class="container-geral view-section hidden">
+        <h2 class="subtitulo-secao" style="color: white; text-align: center; margin-bottom: 20px;">Gestão de Clientes</h2>
+
+        <div class="container-form card" style="max-width: 800px; margin: 0 auto 20px;">
+            <h3 style="margin-bottom: 15px; color: var(--cor-primaria);">Cadastrar Novo Cliente</h3>
+            <form id="formCadastroUsuario" class="form-empilhado">
+                <div class="linha-inputs">
+                    <input type="text" id="novoNome" placeholder="Nome do Cliente" required>
+                    <input type="email" id="novoEmail" placeholder="E-mail" required>
+                </div>
+                <div class="linha-inputs">
+                    <input type="password" id="novaSenhaAdmin" placeholder="Senha provisória" required>
+                    <select id="novoRole" required>
+                        <option value="USER">Cliente</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                </div>
+                <button type="submit">CADASTRAR CLIENTE</button>
+            </form>
+        </div>
+
+        <div class="container-tabela card" style="max-width: 1000px; margin: 0 auto;">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Permissão</th>
+                        <th>Ações Administrativas</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tabelaUsuarios">
+                    </tbody>
+                </table>
+            </div>
+            <div class="paginacao-container" style="text-align: center; margin-top: 15px;">
+                <button id="btnPaginaAnteriorUsuarios" onclick="mudarPaginaUsuarios(-1)" class="btn-paginacao" disabled>⬅️ Anterior</button>
+                <span id="infoPaginaUsuarios" class="span-paginacao" style="margin: 0 15px; font-weight: bold; color: var(--cor-primaria);">Página 1 de 1</span>
+                <button id="btnPaginaProximaUsuarios" onclick="mudarPaginaUsuarios(1)" class="btn-paginacao" disabled>Próxima ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalEditarUsuario" class="modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content card" style="width: 100%; max-width: 400px; padding: 20px;">
+            <h3 style="margin-bottom: 15px; color: var(--cor-primaria);">Editar Cliente</h3>
+            <form id="formEditarUsuario" class="form-empilhado">
+                <input type="hidden" id="editUsuarioId">
+                <input type="text" id="editNome" placeholder="Nome" required>
+                <input type="password" id="editSenha" placeholder="Nova Senha (opcional)">
+                <div class="linha-inputs" style="margin-top: 15px;">
+                    <button type="submit" style="background-color: var(--sucesso);">SALVAR</button>
+                    <button type="button" onclick="fecharModalEdicao()" style="background-color: var(--cinza-texto);">CANCELAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-perfil" class="container-geral view-section hidden">
+        <h2 class="subtitulo-secao" style="color: white; text-align: center; margin-bottom: 20px;">Meu Perfil</h2>
+        <div class="container-form card" style="max-width: 500px; margin: 0 auto;">
+            <form id="formPerfil" class="form-empilhado">
+                <label style="color: var(--cor-primaria); font-weight: bold;">Nome Completo</label>
+                <input type="text" id="perfilNome" required>
+
+                <label style="color: var(--cor-primaria); font-weight: bold; margin-top: 10px;">E-mail (Login)</label>
+                <input type="email" id="perfilEmail" readonly disabled style="background-color: #eee; cursor: not-allowed;" title="O e-mail não pode ser alterado">
+
+                <label style="color: var(--cor-primaria); font-weight: bold; margin-top: 10px;">Alterar Senha</label>
+                <input type="password" id="novaSenhaPerfil" placeholder="Digite a nova senha (opcional)">
+                <input type="password" id="confirmaSenhaPerfil" placeholder="Confirme a nova senha" style="margin-top: 5px;">
+
+                <button type="submit" style="margin-top: 20px;">ATUALIZAR MEU PERFIL</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registrado com sucesso!', reg))
+                    .catch(err => console.error('Erro ao registrar SW:', err));
+            });
+        }
+    </script>
+    <script src="js/script.js"></script>
+</div>
+</body>
+</html>

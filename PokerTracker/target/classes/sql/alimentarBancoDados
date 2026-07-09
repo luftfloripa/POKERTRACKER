@@ -1,0 +1,146 @@
+//100 torneios em cada plataforma para testar!
+
+// 1. Pega o usuário logado e a pulseira VIP (Token)
+const user = JSON.parse(localStorage.getItem('usuarioLogado'));
+const token = localStorage.getItem('token');
+
+
+if (!user || !user.id || !token) {
+    alert("Erro: Faça login no sistema antes de rodar a simulação para gerar o Token de segurança.");
+} else {
+    // 2. Configurações de Data (01/01/2025 até HOJE)
+    const dataInicio = new Date('2025-01-01').getTime();
+    const dataFim = new Date().getTime();
+
+    const plataformas = ['PokerStars', 'GG Poker', 'Coin Poker'];
+    const buyInsComuns = [1.10, 2.20, 5.50, 11.00, 22.00, 33.00, 44.00, 50.00];
+
+    let eventosParaEnviar = [];
+    let bancasSimuladas = { 'PokerStars': 0, 'GG Poker': 0, 'Coin Poker': 0 };
+
+    // 3. Prepara os Depósitos Iniciais
+    plataformas.forEach(plat => {
+        eventosParaEnviar.push({
+            isDeposito: true,
+            valor: 100.00,
+            tipo: 'DEPOSITO',
+            plataforma: plat,
+            data: '2025-01-01',
+            usuarioId: user.id
+        });
+        bancasSimuladas[plat] += 100.00;
+    });
+
+    // 4. Função Geradora
+    function gerarTorneios() {
+        const descricoes = ["Sessão Diária", "Bounty Builder", "Main Event", "Turbo PKO", "Deep Stack", "Sunday Special", "Micro Millions", "High Roller Sat"];
+
+        plataformas.forEach(plat => {
+            let dataAtual = new Date('2025-01-02').getTime();
+            const saltoTempo = (dataFim - dataAtual) / 100;
+
+            for (let i = 0; i < 100; i++) {
+                const buyIn = buyInsComuns[Math.floor(Math.random() * buyInsComuns.length)];
+
+                if (bancasSimuladas[plat] < buyIn) {
+                    const dataRecarga = new Date(dataAtual - 3600000).toISOString().split('T')[0];
+                    eventosParaEnviar.push({
+                        isDeposito: true,
+                        valor: 100.00,
+                        tipo: 'DEPOSITO',
+                        plataforma: plat,
+                        data: dataRecarga,
+                        usuarioId: user.id
+                    });
+                    bancasSimuladas[plat] += 100.00;
+                }
+
+                let rebuy = 0;
+                if (Math.random() > 0.8 && bancasSimuladas[plat] >= (buyIn * 2)) {
+                    rebuy = buyIn;
+                }
+
+                let addon = 0;
+                if (Math.random() > 0.9 && bancasSimuladas[plat] >= (buyIn + rebuy + buyIn)) {
+                    addon = buyIn;
+                }
+
+                const custos = buyIn + rebuy + addon;
+                bancasSimuladas[plat] -= custos;
+
+                let itm = 0;
+                if (Math.random() > 0.85) {
+                    const multiplicador = (Math.random() * 28.5) + 1.5;
+                    itm = parseFloat((custos * multiplicador).toFixed(2));
+                    bancasSimuladas[plat] += itm;
+                }
+
+                const dataFormatada = new Date(dataAtual).toISOString().split('T')[0];
+
+                eventosParaEnviar.push({
+                    isDeposito: false,
+                    descricao: descricoes[Math.floor(Math.random() * descricoes.length)],
+                    plataforma: plat,
+                    buyIn: buyIn,
+                    rebuy: rebuy,
+                    addon: addon,
+                    itm: itm,
+                    data: dataFormatada,
+                    usuarioId: user.id
+                });
+
+                dataAtual += saltoTempo;
+            }
+        });
+    }
+
+    gerarTorneios();
+    eventosParaEnviar.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+    // 6. Orquestrador de Envio pro Java
+    async function simularAmbienteReal() {
+        let sucessoDepositos = 0;
+        let sucessoTorneios = 0;
+        let erros = 0;
+
+        console.log(`Iniciando injeção de ${eventosParaEnviar.length} eventos. Aguarde...`);
+
+        for (const evento of eventosParaEnviar) {
+            try {
+                const url = evento.isDeposito ? '/movimentacoes' : '/torneios';
+                const payload = { ...evento };
+                delete payload.isDeposito;
+
+                // A MÁGICA ESTÁ AQUI: Enviando o Token no Header!
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    evento.isDeposito ? sucessoDepositos++ : sucessoTorneios++;
+                } else {
+                    const msg = await res.text();
+                    console.error("Bloqueado pelo Java:", msg, payload);
+                    erros++;
+                }
+            } catch (e) {
+                console.error("Erro de conexão:", e);
+                erros++;
+            }
+        }
+
+        alert(`Simulação Finalizada!\n\n💰 Depósitos: ${sucessoDepositos}\n🃏 Torneios: ${sucessoTorneios}\n⛔ Erros: ${erros}`);
+
+        // Atualiza a tela se a função existir
+        if (typeof carregarTudo === 'function') {
+            carregarTudo();
+        }
+    }
+
+    simularAmbienteReal();
+}
