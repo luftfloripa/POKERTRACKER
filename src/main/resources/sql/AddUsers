@@ -1,0 +1,61 @@
+// 1. Pega o Token para autorização
+const token = localStorage.getItem('token');
+
+if (!token) {
+    alert("Erro: Token não encontrado. Faça login primeiro!");
+} else {
+    const nomes = ["Lucas", "Ana", "Bruno", "Carla", "Diego", "Elena", "Fabio", "Gisele", "Hugo", "Iris", "João", "Kelly", "Leo", "Maya", "Nuno", "Olívia", "Paulo", "Rosa", "Samuel", "Tatiana"];
+    const sobrenomes = ["Silva", "Santos", "Oliveira", "Souza", "Pereira", "Costa", "Ferreira"];
+
+    async function criarJogadores() {
+        console.log("🚀 Iniciando criação de 20 jogadores...");
+        let sucesso = 0;
+        let erro = 0;
+
+        for (let i = 0; i < 20; i++) {
+            const nomeCompleto = `${nomes[i]} ${sobrenomes[Math.floor(Math.random() * sobrenomes.length)]}`;
+            const email = `${nomes[i].toLowerCase()}${Math.floor(Math.random() * 1000)}@teste.com`;
+
+            const novoUsuario = {
+                nome: nomeCompleto,
+                email: email,
+                senha: "123", // Senha padrão para todos
+                role: "CLIENTE"    // Garantindo que são clientes padrão
+            };
+
+            try {
+                // AQUI ESTAVA O ERRO! A rota correta é /auth/cadastro
+                const res = await fetch('/auth/cadastro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(novoUsuario)
+                });
+
+                if (res.ok) {
+                    sucesso++;
+                    console.log(`✅ Criado: ${nomeCompleto}`);
+                } else {
+                    erro++;
+                    console.error(`❌ Falha ao criar ${nomeCompleto}`);
+                }
+            } catch (e) {
+                erro++;
+                console.error("Erro de conexão:", e);
+            }
+        }
+
+        alert(`Processo Finalizado!\nJogadores criados: ${sucesso}\nErros: ${erro}`);
+
+        // Recarrega a tabela de usuários automaticamente após o script rodar
+        if (typeof carregarListaUsuarios === "function") {
+            carregarListaUsuarios();
+        }
+    }
+
+    criarJogadores();
+}
+
+

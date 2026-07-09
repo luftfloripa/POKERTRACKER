@@ -1,0 +1,124 @@
+(async function gerarMatrizModoTurbo() {
+    const token = localStorage.getItem('token');
+    if (!token) return alert("❌ ERRO: Faça o login como ADMIN primeiro!");
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+    console.log("🚀 Iniciando Simulação no Modo Turbo (Sincronização Corrigida)...");
+
+    const perfisDeTeste = [
+        { nome: "Admin Secundário", email: "admin2@mail.com", role: "ADMIN", tpm: 200 },
+        { nome: "Cliente Grinder", email: "grinder@mail.com", role: "CLIENTE", tpm: 1000 },
+        { nome: "Cliente Moderado", email: "moderado@mail.com", role: "CLIENTE", tpm: 200 },
+        { nome: "Cliente Recreativo", email: "recreativo@mail.com", role: "CLIENTE", tpm: 400 }
+    ];
+
+    for (let p of perfisDeTeste) {
+        try { await fetch('/auth/cadastro', { method: 'POST', headers, body: JSON.stringify({ nome: p.nome, email: p.email, senha: "123", role: p.role }) }); } catch (e) {}
+    }
+
+    const resUsuarios = await fetch('/auth/usuarios', { headers });
+    const listaUsuarios = await resUsuarios.json();
+
+    const dataInicio = new Date(new Date().getFullYear(), 0, 1).getTime();
+    const dataFim = new Date().getTime();
+    const mesesPassados = Math.max(1, (dataFim - dataInicio) / (1000 * 60 * 60 * 24 * 30.44));
+
+    const plataformas = ['PokerStars', 'GG Poker', 'Coin Poker'];
+    const buyInsComuns = [1.10, 2.20, 5.50, 11.00, 22.00, 33.00, 44.00, 50.00];
+
+    let todosEventos = [];
+
+    perfisDeTeste.forEach(perfil => {
+        const userBanco = listaUsuarios.find(u => u.email === perfil.email);
+        if (!userBanco) return;
+
+        // SEPARANDO BANCA E LUCRO POR PLATAFORMA PARA NÃO DESSINCRONIZAR!
+        let bancas = { 'PokerStars': 0, 'GG Poker': 0, 'Coin Poker': 0 };
+        let lucros = { 'PokerStars': 0, 'GG Poker': 0, 'Coin Poker': 0 };
+
+        plataformas.forEach(plat => {
+            todosEventos.push({ url: '/movimentacoes', payload: { usuarioId: userBanco.id, valor: 100, tipo: 'DEPOSITO', plataforma: plat, data: new Date(dataInicio).toISOString().split('T')[0] } });
+            bancas[plat] += 100;
+        });
+
+        const totalTorneios = Math.floor(perfil.tpm * mesesPassados);
+        const saltoTempo = (dataFim - dataInicio) / totalTorneios;
+        let dataAtual = dataInicio;
+        let dataUltimoSaque = dataInicio;
+
+        for (let i = 1; i <= totalTorneios; i++) {
+            dataAtual += saltoTempo;
+            const plat = plataformas[i % 3];
+            const buyIn = buyInsComuns[Math.floor(Math.random() * buyInsComuns.length)];
+
+            if (bancas[plat] < buyIn) {
+                todosEventos.push({ url: '/movimentacoes', payload: { usuarioId: userBanco.id, valor: 100, tipo: 'DEPOSITO', plataforma: plat, data: new Date(dataAtual - 3600000).toISOString().split('T')[0] } });
+                bancas[plat] += 100;
+            }
+
+            const onda = Math.sin((i / 200) * Math.PI);
+            const isDownswing = onda < 0;
+
+            let rebuy = 0, addon = 0;
+            if (Math.random() > (isDownswing ? 0.9 : 0.8) && bancas[plat] >= buyIn * 2) rebuy = buyIn;
+            if (Math.random() > (isDownswing ? 0.95 : 0.85) && bancas[plat] >= buyIn * 3) addon = buyIn;
+
+            const custos = buyIn + rebuy + addon;
+            bancas[plat] -= custos;
+
+            let itm = 0;
+            const chanceItm = isDownswing ? 0.10 : 0.18;
+            if (Math.random() < chanceItm) {
+                const multiMin = isDownswing ? 1.2 : 2.5;
+                const multiMax = isDownswing ? 3.0 : 15.0;
+                itm = custos * (Math.random() * (multiMax - multiMin) + multiMin);
+                bancas[plat] += itm;
+            }
+
+            lucros[plat] += (itm - custos);
+
+            todosEventos.push({
+                url: '/torneios',
+                payload: { usuarioId: userBanco.id, descricao: `Sessão ${isDownswing ? '(Variância)' : '(Upswing)'} #${i}`, plataforma: plat, data: new Date(dataAtual).toISOString().split('T')[0], buyIn: buyIn, rebuy: rebuy, addon: addon, itm: parseFloat(itm.toFixed(2)) }
+            });
+
+            // NOVA LÓGICA DE MAKE-UP (Saca individualmente e desconta da memória do JS)
+            if (dataAtual - dataUltimoSaque >= 15 * 24 * 60 * 60 * 1000) {
+                plataformas.forEach(p => {
+                    // Só saca se teve lucro e se o saque não for quebrar a banca atual do Javascript
+                    if (lucros[p] > 0 && bancas[p] > lucros[p]) {
+                        todosEventos.push({ url: '/movimentacoes', payload: { usuarioId: userBanco.id, valor: parseFloat(lucros[p].toFixed(2)), tipo: 'SAQUE', plataforma: p, data: new Date(dataAtual).toISOString().split('T')[0] } });
+                        bancas[p] -= lucros[p]; // Sincronizando a calculadora interna!
+                        lucros[p] = 0;
+                    }
+                });
+                dataUltimoSaque = dataAtual;
+            }
+        }
+    });
+
+    todosEventos.sort((a, b) => {
+        let dataA = new Date(a.payload.data).getTime();
+        let dataB = new Date(b.payload.data).getTime();
+        if (dataA !== dataB) return dataA - dataB;
+        if (a.payload.tipo === 'DEPOSITO') return -1;
+        if (b.payload.tipo === 'DEPOSITO') return 1;
+        if (a.payload.tipo === 'SAQUE') return 1;
+        if (b.payload.tipo === 'SAQUE') return -1;
+        return 0;
+    });
+
+    console.log(`🚀 Iniciando injeção de ${todosEventos.length} eventos no MODO TURBO (sem pausas)...`);
+    let sucesso = 0, erro = 0;
+
+    for (let evt of todosEventos) {
+        try {
+            const res = await fetch(evt.url, { method: 'POST', headers, body: JSON.stringify(evt.payload) });
+            if (res.ok) sucesso++; else erro++;
+        } catch (e) { erro++; }
+    }
+
+    alert(`🎉 MATRIZ SIMULADA COM SUCESSO!\n\n✅ Salvos: ${sucesso}\n❌ Erros: ${erro}`);
+    if (typeof carregarListaUsuarios === "function") carregarListaUsuarios();
+    if (typeof carregarTudo === "function") carregarTudo();
+})();
